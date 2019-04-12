@@ -10,32 +10,33 @@ def split_nominal_feature_to_bool_features(df, feature_to_split):
         df['{}_{}'.format(feature_to_split, issue)] = issue_bool_list
 
 
-def get_features_probabilities_dict(df):
+def get_features_probabilities_dict(df, eliminate_nd_elements = True):
     features = list(df.columns)  # features[0] is labels
     features_dict = {}
 
     # Counting and will later normalize by total_feature_size
     for feature in features:
-        feature_prob_dict = {'value': np.array([]), 'probs': np.array([])}  # value/prob
-        feature_values = df[feature].unique()
-        feature_total_not_missing_values = 0
+        is_nominal = df[feature].dtype == np.object
+        values_init = np.array([]) if is_nominal else None
+        probs_init = np.array([]) if is_nominal else None
+        mean_init = None if is_nominal else -1
 
-        for feature_value in feature_values:
-            try:
-                fitting_values_count = (df[feature] == feature_value).value_counts()[True]
-            except KeyError:
-                fitting_values_count = 0
+        feature_info_dict = {'is_nominal': is_nominal, 'values': values_init, 'probs': probs_init, 'mean': mean_init}
 
-            feature_total_not_missing_values += fitting_values_count
-            np.append(feature_prob_dict['value'], feature_value)
-            np.append(feature_prob_dict['probs'], fitting_values_count)
-            # feature_prob_dict['value'].append(feature_value)
-            # feature_prob_dict['probs'].append(fitting_values_count)
+        if is_nominal:
+            values_count = df[feature].value_counts()
+            feature_total_not_missing_values = sum(values_count.values)
+            feature_info_dict['values'] = values_count.keys().values
+            feature_info_dict['probs'] = values_count.values / feature_total_not_missing_values
+        else:
+            feature_info_dict['mean'] = df[feature].mean()
 
-        # Normalize
-        feature_prob_dict['probs'] /= feature_total_not_missing_values
-        # feature_prob_dict = {k: v / feature_total_not_missing_values for k, v in feature_prob_dict.items()}
-        features_dict[feature] = feature_prob_dict
+        if eliminate_nd_elements:
+            for value in feature_info_dict.values():
+                if isinstance(value, np.ndarray):
+                    value = value.tolist()
+
+        features_dict[feature] = feature_info_dict
 
     return features_dict
 
