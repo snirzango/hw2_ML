@@ -41,9 +41,11 @@ def get_features_probabilities_dict(df, eliminate_nd_elements = True):
     return features_dict
 
 
-def fill_missing_values(prob_Dict, feature_name):
-    names = prob_Dict[feature_name]['names']
-    probs = prob_Dict[feature_name]['probs']
-
-    return np.random.choice(names, 1, p=probs)
+def fill_missing_values(features_info_dict, feature_name):
+    if features_info_dict[feature_name]['is_nominal']:
+        names = features_info_dict[feature_name]['values']
+        probs = features_info_dict[feature_name]['probs']
+        return np.random.choice(names, 1, p=probs)
+    else:
+        return features_info_dict[feature_name]['mean']
 

@@ -16,6 +16,5 @@ nd_dict = utils.get_features_probabilities_dict(df)
 # print(list(df.columns))
 # print(df.Most_Important_Issue_Foreign_Affairs.count())
 
-
-json.dump(nd_dict, open('prob_dict.json', 'w'))
+print(nd_dict)
 print('done')
