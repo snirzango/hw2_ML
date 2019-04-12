@@ -32,9 +32,9 @@ def get_features_probabilities_dict(df, eliminate_nd_elements = True):
             feature_info_dict['mean'] = df[feature].mean()
 
         if eliminate_nd_elements:
-            for value in feature_info_dict.values():
+            for key, value in feature_info_dict.items():
                 if isinstance(value, np.ndarray):
-                    value = value.tolist()
+                    feature_info_dict[key] = value.tolist()
 
         features_dict[feature] = feature_info_dict
 
