@@ -24,7 +24,7 @@ def fill_missing_values(df, features_info_dict):
         df[feature] = df[feature].apply(lambda v: choose_mean_value(features_info_dict, feature) if str(v) == 'nan' else v)
 
 
-def get_features_probabilities_dict(df, eliminate_nd_elements=True):
+def get_features_info_dict(df, eliminate_nd_elements=True):
     features = list(df.columns)  # features[0] is labels
     features_dict = {}
 
@@ -59,7 +59,7 @@ def choose_mean_value(features_info_dict, feature_name):
     if features_info_dict[feature_name]['is_nominal']:
         names = features_info_dict[feature_name]['values']
         probs = features_info_dict[feature_name]['probs']
-        return np.random.choice(names, 1, p=probs)
+        return np.random.choice(names, 1, p=probs)[0]
     else:
         return features_info_dict[feature_name]['mean']
 
@@ -83,8 +83,8 @@ def replace_negatives_with_mean(df, features):
         df[feature] = df[feature].apply(lambda v: mean if v < 0 else v)
 
 
-def feature_hist(df, feature):
-    df.hist(column=feature, bins=100)
+def feature_hist(df, feature, bins=100):
+    df.hist(column=feature, bins=bins)
     plt.pyplot.show()
 
 
@@ -109,7 +109,7 @@ def find_outliers(df):
     print(count)
 
 
-def clean_data(df):
+def clean_data(df, features_info_dict=None):
     ''' Main function to clean data '''
 
     #  Replacing negative numbers with mean for appropriate columns:
@@ -117,18 +117,30 @@ def clean_data(df):
     replace_negatives_with_mean(df, features_to_apply)
 
     #  Nominal features splitting:
-    nominal_features_to_split = []
+    nominal_features_to_split = ['Most_Important_Issue', 'Will_vote_only_large_party', 'Main_transportation',
+                                 'Occupation']
     for feature in nominal_features_to_split:
         split_nominal_feature_to_bool_features(df, feature)
 
-    features_info_dict = get_features_probabilities_dict(df)
+    if features_info_dict is None:
+        features_info_dict = get_features_info_dict(df)
 
     #  Fill missing values by probability/mean:
     fill_missing_values(df, features_info_dict)
 
+    # Binary nominal (yes/no etc') to numeric (0/1):
+    binray_features_and_values = {'Looking_at_poles_results': {'Yes': 0, 'No': 1},
+                                  'Married': {'Yes': 0, 'No': 1},
+                                  'Gender': {'Female': 0, 'Male': 1},
+                                  'Voting_Time': {'By_16:00': 0, 'After_16:00': 1},
+                                  'Age_group': {'Below_30': 0, '30-45': 1, '45_and_up': 2}}
+    for feature, replacement_dict in binray_features_and_values.items():
+        df[feature] = df[feature].map(replacement_dict)
+
     #  Normalization phase:
     features_to_normalize_0_to_1 = []
-    features_to_normalize_minus1_to_1 = []
+    features_to_normalize_minus1_to_1 = ['AVG_lottary_expanses', 'Avg_monthly_expense_on_pets_or_plants',
+                                         'Occupation_Satisfaction', 'Avg_environmental_importance']
     scalar_0_to_1 = preprocessing.MinMaxScaler(feature_range=(0, 1))
     scalar_minus1_to_1 = preprocessing.MinMaxScaler(feature_range=(-1, 1))
 
