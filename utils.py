@@ -9,6 +9,15 @@ def split_nominal_feature_to_bool_features(df, feature_to_split):
         issue_bool_list = [1 if x == issue else 0 for x in df.Most_Important_Issue]
         df['{}_{}'.format(feature_to_split, issue)] = issue_bool_list
 
+def fill_missing_values(features_info_dict, df):
+    features = list(df.columns)
+    for feature in features:
+        df[feature] = df[feature].apply(lambda v: choose_mean_value(features_info_dict, feature) if str(v) == 'nan' else v)
+
+
+
+
+
 
 def get_features_probabilities_dict(df, eliminate_nd_elements = True):
     features = list(df.columns)  # features[0] is labels
@@ -41,7 +50,7 @@ def get_features_probabilities_dict(df, eliminate_nd_elements = True):
     return features_dict
 
 
-def fill_missing_values(features_info_dict, feature_name):
+def choose_mean_value(features_info_dict, feature_name):
     if features_info_dict[feature_name]['is_nominal']:
         names = features_info_dict[feature_name]['values']
         probs = features_info_dict[feature_name]['probs']
