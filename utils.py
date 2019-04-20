@@ -7,8 +7,9 @@ from sklearn.ensemble import RandomForestClassifier, IsolationForest
 from sklearn import preprocessing
 from sklearn import metrics
 from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LinearRegression
+from sklearn.linear_model import LinearRegression, LassoCV
 from sklearn.feature_selection import RFE
+from sklearn.pipeline import make_pipeline
 
 
 def fill_missing_values(df, features_info_dict):
@@ -102,37 +103,62 @@ def find_outliers(df):
     print(count)
 
 
-def feature_selection_RFE_test(df):
+def feature_selection_RFE_test(df, linear_test=True, nonlinear_test=True):
     df_features = df.drop('Vote', axis=1)
     df_label = df['Vote']
+    features_names = list(df_features.columns)
 
+    # Configurations:
     num_of_all_features = len(df_features.columns)
     max_features_to_select = int((num_of_all_features / 2) + 4)
     min_features_to_select = 1
 
-    optimal_features_number, best_score = 0, 0
+    # Alpha (regularization strength) of LASSO regression
+    lasso_eps = 0.001
+    lasso_nalpha = 200
+    lasso_iter = 9000
+
+    # Min and max degree of polynomials features to consider
+    degree_min = 2
+    degree_max = 8
+
+    results = {test_mode: {'optimal_features_number': 0, 'best_score': 0} for test_mode in ['linear', 'nonlinear']}
 
     print('Starting feature selection test.')
     print('Total features: {}, max features to select: {}, min features to select: {}.\n'.format(
                                                                 num_of_all_features, max_features_to_select, min_features_to_select))
 
-    for i in range(1, max_features_to_select):
-        x_train, x_test, y_train, y_test = train_test_split(df_features, df_label, test_size=0.3, random_state=0)
-        model = LinearRegression()
-        rfe = RFE(model, n_features_to_select=i)
-        x_train_rfe = rfe.fit_transform(x_train, y_train)
-        x_test_rfe = rfe.transform(x_test)
-        model.fit(x_train_rfe, y_train)
-        score = model.score(x_test_rfe, y_test)
+    x_train, x_test, y_train, y_test = train_test_split(df_features, df_label, test_size=0.3, random_state=0)
 
-        print('Testing selection of {} features. Score: {}.'.format(i, score))
+    if linear_test:
+        print('Starting linear test.')
+        for i in range(1, max_features_to_select):
+            model = LinearRegression()
+            rfe = RFE(model, n_features_to_select=i)
+            x_train_rfe = rfe.fit_transform(x_train, y_train)
+            x_test_rfe = rfe.transform(x_test)
+            model.fit(x_train_rfe, y_train)
+            score = model.score(x_test_rfe, y_test)
 
-        if score > best_score:
-            optimal_features_number, best_score = i, score
+            print('Testing selection of {} features. Score: {}.'.format(i, score))
+
+            if score > results['linear']['best_score']:
+                results['linear']['best_score'], results['linear']['optimal_features_number'] = i, score
+
+    if nonlinear_test:
+        # Make a pipeline model with polynomial transformation and LASSO regression with cross-validation,
+        # run it for increasing degree of polynomial (complexity of the model)
+        for degree in range(degree_min, degree_max + 1):
+            model = make_pipeline(preprocessing.PolynomialFeatures(degree, interaction_only=False),
+                                  LassoCV(cv=5, tol=0.001, max_iter=3000))  # TODO: check 2000
+            model.fit(x_train, y_train)
+            test_pred = np.array(model.predict(x_test))
+            RMSE = np.sqrt(np.sum(np.square(test_pred - y_test)))
+            soore = model.score(x_test, y_test)
 
     print('\nTest Ended.')
     print('Best choice found: {} features with score: {}.'.format(optimal_features_number, best_score))
-
+    # TODO: print winning features
 
 def clean_data(df, features_info_dict=None):
     ''' Main function to clean data '''
