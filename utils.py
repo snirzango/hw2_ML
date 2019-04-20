@@ -122,7 +122,8 @@ def feature_selection_RFE_test(df, linear_test=True, nonlinear_test=True):
     degree_min = 2
     degree_max = 8
 
-    results = {test_mode: {'optimal_features_number': 0, 'best_score': 0} for test_mode in ['linear', 'nonlinear']}
+    results = {test_mode: {'optimal_features_number': 0, 'best_score': 0, 'features_selected': [], 'features_dropped': []}
+               for test_mode in ['linear', 'nonlinear']}
 
     print('Starting feature selection test.')
     print('Total features: {}, max features to select: {}, min features to select: {}.\n'.format(
@@ -143,7 +144,14 @@ def feature_selection_RFE_test(df, linear_test=True, nonlinear_test=True):
             print('Testing selection of {} features. Score: {}.'.format(i, score))
 
             if score > results['linear']['best_score']:
-                results['linear']['best_score'], results['linear']['optimal_features_number'] = i, score
+                results['linear']['best_score'], results['linear']['optimal_features_number'] = score, i
+                results['linear']['features_selected'] = [features_names[i] for i in range(len(features_names)) if rfe.support_[i]]
+                results['linear']['features_dropped'] = [features_names[i] for i in range(len(features_names)) if not rfe.support_[i]]
+
+        print('\nLinear test ended. Summary:')
+        print('Best score: {}, number of features: {}.\n'.format(results['linear']['best_score'], results['linear']['optimal_features_number']))
+        print('Features selected: {}.\n'.format(results['linear']['features_selected']))
+        print('Features dropped: {}.\n'.format(results['linear']['features_dropped']))
 
     if nonlinear_test:
         # Make a pipeline model with polynomial transformation and LASSO regression with cross-validation,
@@ -156,9 +164,8 @@ def feature_selection_RFE_test(df, linear_test=True, nonlinear_test=True):
             RMSE = np.sqrt(np.sum(np.square(test_pred - y_test)))
             soore = model.score(x_test, y_test)
 
-    print('\nTest Ended.')
-    print('Best choice found: {} features with score: {}.'.format(optimal_features_number, best_score))
-    # TODO: print winning features
+    print('\nAll Tests Ended.')
+
 
 def clean_data(df, features_info_dict=None):
     ''' Main function to clean data '''
