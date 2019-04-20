@@ -103,7 +103,7 @@ def find_outliers(df):
     print(count)
 
 
-def feature_selection_RFE_test(df, linear_test=True, nonlinear_test=True):
+def feature_selection_RFE_test(df, RFE_test=True, nonlinear_test=True):
     df_features = df.drop('Vote', axis=1)
     df_label = df['Vote']
     features_names = list(df_features.columns)
@@ -131,7 +131,7 @@ def feature_selection_RFE_test(df, linear_test=True, nonlinear_test=True):
 
     x_train, x_test, y_train, y_test = train_test_split(df_features, df_label, test_size=0.3, random_state=0)
 
-    if linear_test:
+    if RFE_test:
         print('Starting linear test.')
         for i in range(1, max_features_to_select):
             model = LinearRegression()
@@ -153,75 +153,82 @@ def feature_selection_RFE_test(df, linear_test=True, nonlinear_test=True):
         print('Features selected: {}.\n'.format(results['linear']['features_selected']))
         print('Features dropped: {}.\n'.format(results['linear']['features_dropped']))
 
-    if nonlinear_test:
-        # Make a pipeline model with polynomial transformation and LASSO regression with cross-validation,
-        # run it for increasing degree of polynomial (complexity of the model)
-        for degree in range(degree_min, degree_max + 1):
-            model = make_pipeline(preprocessing.PolynomialFeatures(degree, interaction_only=False),
-                                  LassoCV(cv=5, tol=0.001, max_iter=3000))  # TODO: check 2000
-            model.fit(x_train, y_train)
-            test_pred = np.array(model.predict(x_test))
-            RMSE = np.sqrt(np.sum(np.square(test_pred - y_test)))
-            soore = model.score(x_test, y_test)
+    # if nonlinear_test:
+    #     # Make a pipeline model with polynomial transformation and LASSO regression with cross-validation,
+    #     # run it for increasing degree of polynomial (complexity of the model)
+    #     for degree in range(degree_min, degree_max + 1):
+    #         model = make_pipeline(preprocessing.PolynomialFeatures(degree, interaction_only=False),
+    #                               LassoCV(cv=5, tol=0.001, max_iter=2000))  # TODO: check 2000
+    #         model.fit(x_train, y_train)
+    #         test_pred = np.array(model.predict(x_test))
+    #         RMSE = np.sqrt(np.sum(np.square(test_pred - y_test)))
+    #         soore = model.score(x_test, y_test)
 
     print('\nAll Tests Ended.')
 
 
-def clean_data(df, features_info_dict=None):
+def clean_data(df, features_info_dict=None, negative_to_mean=True, labels_to_unique_ints=True, nominal_to_bool_split=True,
+               missing_values_fill=True, binary_to_nominal=True, normalization=True):
     ''' Main function to clean data '''
 
     # TODO: add "features to drop" section.
 
-    # Replacing negative numbers with mean for appropriate columns:
-    features_to_apply = ['Avg_monthly_expense_when_under_age_21']
-    replace_negatives_with_mean(df, features_to_apply)
+    if negative_to_mean:
+        # Replacing negative numbers with mean for appropriate columns:
+        features_to_apply = ['Avg_monthly_expense_when_under_age_21']
+        replace_negatives_with_mean(df, features_to_apply)
 
-    # Convert Vote (label) to unique numbers
-    df['Vote'] = df['Vote'].astype("str")
-    df['Vote'] = df['Vote'].astype("category")
-    df['Vote'] = df['Vote'].cat.rename_categories(range(df['Vote'].nunique())).astype(int)
-    df.loc[df['Vote'].isnull(), 'Vote'] = np.nan  # fix NaN conversion
+    if labels_to_unique_ints:
+        # Convert Vote (label) to unique numbers
+        df['Vote'] = df['Vote'].astype("str")
+        df['Vote'] = df['Vote'].astype("category")
+        df['Vote'] = df['Vote'].cat.rename_categories(range(df['Vote'].nunique())).astype(int)
+        df.loc[df['Vote'].isnull(), 'Vote'] = np.nan  # fix NaN conversion
 
-    # Nominal features splitting:
-    nominal_features_to_split = ['Most_Important_Issue', 'Will_vote_only_large_party', 'Main_transportation',
-                                 'Occupation']
-    df = ce.OneHotEncoder(handle_unknown='ignore', use_cat_names=True, cols=nominal_features_to_split).fit_transform(df)
+    if nominal_to_bool_split:
+        # Nominal features splitting:
+        nominal_features_to_split = ['Most_Important_Issue', 'Will_vote_only_large_party', 'Main_transportation',
+                                     'Occupation']
+        df = ce.OneHotEncoder(handle_unknown='ignore', use_cat_names=True, cols=nominal_features_to_split).fit_transform(df)
 
     if features_info_dict is None:
         features_info_dict = get_features_info_dict(df)
 
-    #  Fill missing values by probability/mean:
-    df = fill_missing_values(df, features_info_dict)
+    if missing_values_fill:
+        #  Fill missing values by probability/mean:
+        df = fill_missing_values(df, features_info_dict)
 
-    # Binary nominal (yes/no etc') to numeric (0/1):
-    binary_features_and_values = {'Looking_at_poles_results': {'Yes': 0, 'No': 1},
-                                  'Financial_agenda_matters': {'Yes': 0, 'No': 1},
-                                  'Married': {'Yes': 0, 'No': 1},
-                                  'Gender': {'Female': 0, 'Male': 1},
-                                  'Voting_Time': {'By_16:00': 0, 'After_16:00': 1},
-                                  'Age_group': {'Below_30': 0, '30-45': 1, '45_and_up': 2}}
-    for feature, replacement_dict in binary_features_and_values.items():
-        df[feature] = df[feature].map(replacement_dict)
+    if binary_to_nominal:
+        # Binary nominal (yes/no etc') to numeric (0/1):
+        binary_features_and_values = {'Looking_at_poles_results': {'Yes': 0, 'No': 1},
+                                      'Financial_agenda_matters': {'Yes': 0, 'No': 1},
+                                      'Married': {'Yes': 0, 'No': 1},
+                                      'Gender': {'Female': 0, 'Male': 1},
+                                      'Voting_Time': {'By_16:00': 0, 'After_16:00': 1},
+                                      'Age_group': {'Below_30': 0, '30-45': 1, '45_and_up': 2}}
+        for feature, replacement_dict in binary_features_and_values.items():
+            df[feature] = df[feature].map(replacement_dict)
 
-    #  Normalization phase:
-    features_to_normalize_0_to_1 = ['Age_group', 'Avg_Residancy_Altitude', 'Avg_size_per_room',
-                                    'Garden_sqr_meter_per_person_in_residancy_area', 'Num_of_kids_born_last_10_years',
-                                    'Number_of_differnt_parties_voted_for', 'Number_of_valued_Kneset_members',
-                                    'Phone_minutes_10_years']
-    features_to_normalize_minus1_to_1 = ['AVG_lottary_expanses', 'Avg_monthly_expense_on_pets_or_plants',
-                                         'Occupation_Satisfaction', 'Avg_environmental_importance',
-                                         'Avg_Satisfaction_with_previous_vote', 'Avg_education_importance',
-                                         'Avg_government_satisfaction', 'Avg_monthly_expense_when_under_age_21',
-                                         'Avg_monthly_household_cost', 'Avg_monthly_income_all_years',
-                                         'Last_school_grades', 'Overall_happiness_score', 'Political_interest_Total_Score',
-                                         'Weighted_education_rank', 'Yearly_ExpensesK', 'Yearly_IncomeK']
-    scalar_0_to_1 = preprocessing.MinMaxScaler(feature_range=(0, 1))
-    scalar_minus1_to_1 = preprocessing.MinMaxScaler(feature_range=(-1, 1))
+    if normalization:
+        #  Normalization phase:
+        features_to_normalize_0_to_1 = ['Age_group', 'Avg_Residancy_Altitude', 'Avg_size_per_room',
+                                        'Garden_sqr_meter_per_person_in_residancy_area', 'Num_of_kids_born_last_10_years',
+                                        'Number_of_differnt_parties_voted_for', 'Number_of_valued_Kneset_members',
+                                        'Phone_minutes_10_years']
+        features_to_normalize_minus1_to_1 = ['AVG_lottary_expanses', 'Avg_monthly_expense_on_pets_or_plants',
+                                             'Occupation_Satisfaction', 'Avg_environmental_importance',
+                                             'Avg_Satisfaction_with_previous_vote', 'Avg_education_importance',
+                                             'Avg_government_satisfaction', 'Avg_monthly_expense_when_under_age_21',
+                                             'Avg_monthly_household_cost', 'Avg_monthly_income_all_years',
+                                             'Last_school_grades', 'Overall_happiness_score', 'Political_interest_Total_Score',
+                                             'Weighted_education_rank', 'Yearly_ExpensesK', 'Yearly_IncomeK']
+        scalar_0_to_1 = preprocessing.MinMaxScaler(feature_range=(0, 1))
+        scalar_minus1_to_1 = preprocessing.MinMaxScaler(feature_range=(-1, 1))
 
-    for feature in features_to_normalize_0_to_1:
-        df[feature] = scalar_0_to_1.fit_transform(df[feature].values.reshape(-1, 1))
+        for feature in features_to_normalize_0_to_1:
+            df[feature] = scalar_0_to_1.fit_transform(df[feature].values.reshape(-1, 1))
 
-    for feature in features_to_normalize_minus1_to_1:
-        df[feature] = scalar_minus1_to_1.fit_transform(df[feature].values.reshape(-1, 1))
+        for feature in features_to_normalize_minus1_to_1:
+            df[feature] = scalar_minus1_to_1.fit_transform(df[feature].values.reshape(-1, 1))
 
     return df

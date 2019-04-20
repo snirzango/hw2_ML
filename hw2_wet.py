@@ -10,4 +10,4 @@ df = pn.read_csv(r'ElectionsData.csv', header=0)
 nd_dict = utils.get_features_info_dict(df)
 df = utils.clean_data(df, nd_dict)
 
-utils.feature_selection_RFE_test(df, linear_test=True, nonlinear_test=False)
+utils.feature_selection_RFE_test(df, RFE_test=True, nonlinear_test=False)
