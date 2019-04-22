@@ -1,7 +1,11 @@
+from globals import *
+
 import numpy as np
 import pandas as pn
 import category_encoders as ce
 import matplotlib as plt
+
+import warnings
 
 from sklearn.ensemble import RandomForestClassifier, IsolationForest
 from sklearn import preprocessing
@@ -9,25 +13,25 @@ from sklearn import metrics
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression, LassoCV
 from sklearn.feature_selection import RFE
-from sklearn.pipeline import make_pipeline
+from sklearn.metrics import roc_auc_score
 
 
-ElectionData = pn.read_csv(r'ElectionsData.csv', header=0)
-label_name = 'Vote'
-
-
-def drop_label_column(df=ElectionData):
+def drop_label_column(df=df_train):
     return df.drop(label_name, axis=1)
 
 
-def fill_missing_values(features_info_dict, df=ElectionData):
+def get_label_column(df=df_train):
+    return df[label_name]
+
+
+def fill_missing_values(features_info_dict, df=df_train):
     features = list(df.columns)
     for feature in features:
         df[feature] = df[feature].apply(lambda v: choose_mean_value(features_info_dict, feature) if str(v) == 'nan' else v)
     return df
 
 
-def get_features_info_dict(df=ElectionData, eliminate_nd_elements=True):
+def get_features_info_dict(df=df_train, eliminate_nd_elements=True):
     features = list(df.columns)  # features[0] is labels
     features_dict = {}
 
@@ -67,31 +71,20 @@ def choose_mean_value(features_info_dict, feature_name):
         return features_info_dict[feature_name]['mean']
 
 
-def test(x_train, y_train, x_test, y_test, classifier=RandomForestClassifier(n_estimators=3)):
-    classifier = classifier.fit(x_train, y_train)
-
-    # output = forest.predict(test_data_noNaN)
-    y_pred = classifier.predict(x_test)
-
-    print('accuracy:', metrics.accuracy_score(y_test, y_pred))
-    print('precision:', metrics.precision_score(y_test, y_pred))
-    print('recall:', metrics.recall_score(y_test, y_pred))
-    print('f1 score:', metrics.f1_score(y_test, y_pred))
-
-
-def replace_negatives_with_mean(features, df=ElectionData):
+def replace_negatives_with_mean(features, df=df_train):
     for feature in features:
         mean = df[feature][df[feature] >= 0].mean()
         df[feature] = df[feature].apply(lambda v: mean if v < 0 else v)
 
 
-def feature_hist(feature, df=ElectionData, bins=100):
+def feature_hist(feature, df=df_train, bins=100):
     df.hist(column=feature, bins=bins)
     plt.pyplot.show()
 
 
-def find_outliers(df=ElectionData):
+def find_outliers(df=df_train):
     ObjFeat = df.keys()[df.dtypes.map(lambda x: x == 'object')]
+
     for f in ObjFeat:
         df[f] = df[f].astype("str")
         df[f] = df[f].astype("category")
@@ -108,74 +101,11 @@ def find_outliers(df=ElectionData):
 
         if pred == -1:
             count += 1
+
     print(count)
 
 
-def feature_selection_RFE_test(df=ElectionData, RFE_test=True, nonlinear_test=True):
-    df_features = drop_label_column(df)
-    df_label = df[label_name]
-    features_names = list(df_features.columns)
-
-    # Configurations:
-    num_of_all_features = len(df_features.columns)
-    max_features_to_select = int((num_of_all_features / 2) + 4)
-    min_features_to_select = 1
-
-    # Alpha (regularization strength) of LASSO regression
-    lasso_eps = 0.001
-    lasso_nalpha = 200
-    lasso_iter = 9000
-
-    # Min and max degree of polynomials features to consider
-    degree_min = 2
-    degree_max = 8
-
-    results = {test_mode: {'optimal_features_number': 0, 'best_score': 0, 'features_selected': [], 'features_dropped': []}
-               for test_mode in ['linear', 'nonlinear']}
-
-    print('Starting feature selection test.')
-    print('Total features: {}, max features to select: {}, min features to select: {}.\n'.format(
-                                                                num_of_all_features, max_features_to_select, min_features_to_select))
-
-    x_train, x_test, y_train, y_test = train_test_split(df_features, df_label, test_size=0.3, random_state=0)
-
-    if RFE_test:
-        print('Starting linear test.')
-        for i in range(1, max_features_to_select):
-            model = LinearRegression()
-            rfe = RFE(model, n_features_to_select=i)
-            x_train_rfe = rfe.fit_transform(x_train, y_train)
-            x_test_rfe = rfe.transform(x_test)
-            model.fit(x_train_rfe, y_train)
-            score = model.score(x_test_rfe, y_test)
-
-            print('Testing selection of {} features. Score: {}.'.format(i, score))
-
-            if score > results['linear']['best_score']:
-                results['linear']['best_score'], results['linear']['optimal_features_number'] = score, i
-                results['linear']['features_selected'] = [features_names[i] for i in range(len(features_names)) if rfe.support_[i]]
-                results['linear']['features_dropped'] = [features_names[i] for i in range(len(features_names)) if not rfe.support_[i]]
-
-        print('\nLinear test ended. Summary:')
-        print('Best score: {}, number of features: {}.\n'.format(results['linear']['best_score'], results['linear']['optimal_features_number']))
-        print('Features selected: {}.\n'.format(results['linear']['features_selected']))
-        print('Features dropped: {}.\n'.format(results['linear']['features_dropped']))
-
-    # if nonlinear_test:
-    #     # Make a pipeline model with polynomial transformation and LASSO regression with cross-validation,
-    #     # run it for increasing degree of polynomial (complexity of the model)
-    #     for degree in range(degree_min, degree_max + 1):
-    #         model = make_pipeline(preprocessing.PolynomialFeatures(degree, interaction_only=False),
-    #                               LassoCV(cv=5, tol=0.001, max_iter=2000))  # TODO: check 2000
-    #         model.fit(x_train, y_train)
-    #         test_pred = np.array(model.predict(x_test))
-    #         RMSE = np.sqrt(np.sum(np.square(test_pred - y_test)))
-    #         soore = model.score(x_test, y_test)
-
-    print('\nAll Tests Ended.')
-
-
-def clean_data(df=ElectionData, features_info_dict=None, negative_to_mean=True, labels_to_unique_ints=True, nominal_to_bool_split=True,
+def clean_data(df=df_train, features_info_dict=None, negative_to_mean=True, labels_to_unique_ints=True, nominal_to_bool_split=True,
                missing_values_fill=True, binary_to_nominal=True, normalization=True):
     ''' Main function to clean data '''
 
@@ -240,3 +170,30 @@ def clean_data(df=ElectionData, features_info_dict=None, negative_to_mean=True, 
             df[feature] = scalar_minus1_to_1.fit_transform(df[feature].values.reshape(-1, 1))
 
     return df
+
+
+def test_with_random_forest(df_to_train_on, df_to_test_on, labels_are_strings=True):
+    '''
+        Evaluate with Random Forest Classifier.
+        Bear in mind that the "df" parameter should be either the VALIDATION or TEST set.
+        It does not have a default value to emphasize that fact.
+    '''
+
+    if labels_are_strings:
+        score_function = metrics.accuracy_score
+    else:
+        score_function = metrics.mean_squared_error
+        warnings.warn('If labels are ints then the problem is tested like regression and not classification!!')
+
+    df_train_features, df_train_label = drop_label_column(df_to_train_on), get_label_column(df_to_train_on)
+    df_test_features, df_test_label = drop_label_column(df_to_test_on), get_label_column(df_to_test_on)
+
+    random_forest = RandomForestClassifier(n_estimators=100, random_state=41, max_depth=3)
+    random_forest.fit(df_train_features, df_train_label)
+
+    train_predition = random_forest.predict(df_train_features)
+    print('Accuracy on training set: {}'.format(score_function(df_train_label, train_predition)))
+
+    test_pred = random_forest.predict(df_test_features)
+    print('Accuracy on test set: {}'.format(score_function(df_test_label, test_pred)))
+

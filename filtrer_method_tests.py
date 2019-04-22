@@ -1,4 +1,5 @@
 from utils import *
+from globals import *
 from sklearn.feature_selection import VarianceThreshold
 
 
@@ -66,4 +67,3 @@ def find_correlated_features(df=ElectionData, correlation_threshold=0.8, to_prin
         print('\nFound {} correlated_features. The found features (to drop) are:\n{}\n'.format(len(correlated_features), correlated_features))
 
     return correlated_features
-
