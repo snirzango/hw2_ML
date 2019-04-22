@@ -1,13 +1,12 @@
-import numpy as np
-import pandas as pn
-import utils, json, pickle
+from utils import *
+from filtrer_method_tests import *
 
-df = pn.read_csv(r'ElectionsData.csv', header=0)
+df = ElectionData
+
 # train, test = train_test_split(df, test_size=0.1)
 # train, validation = train_test_split(train, test_size=0.25)
 
+# cleaned_df = utils.clean_data(negative_to_mean=False, labels_to_unique_ints=True, nominal_to_bool_split=True,
+#                               missing_values_fill=True, binary_to_nominal=True, normalization=False)
 
-nd_dict = utils.get_features_info_dict(df)
-df = utils.clean_data(df, nd_dict)
-
-utils.feature_selection_RFE_test(df, RFE_test=True, nonlinear_test=False)
+find_correlated_features()

@@ -12,14 +12,22 @@ from sklearn.feature_selection import RFE
 from sklearn.pipeline import make_pipeline
 
 
-def fill_missing_values(df, features_info_dict):
+ElectionData = pn.read_csv(r'ElectionsData.csv', header=0)
+label_name = 'Vote'
+
+
+def drop_label_column(df=ElectionData):
+    return df.drop(label_name, axis=1)
+
+
+def fill_missing_values(features_info_dict, df=ElectionData):
     features = list(df.columns)
     for feature in features:
         df[feature] = df[feature].apply(lambda v: choose_mean_value(features_info_dict, feature) if str(v) == 'nan' else v)
     return df
 
 
-def get_features_info_dict(df, eliminate_nd_elements=True):
+def get_features_info_dict(df=ElectionData, eliminate_nd_elements=True):
     features = list(df.columns)  # features[0] is labels
     features_dict = {}
 
@@ -71,25 +79,25 @@ def test(x_train, y_train, x_test, y_test, classifier=RandomForestClassifier(n_e
     print('f1 score:', metrics.f1_score(y_test, y_pred))
 
 
-def replace_negatives_with_mean(df, features):
+def replace_negatives_with_mean(features, df=ElectionData):
     for feature in features:
         mean = df[feature][df[feature] >= 0].mean()
         df[feature] = df[feature].apply(lambda v: mean if v < 0 else v)
 
 
-def feature_hist(df, feature, bins=100):
+def feature_hist(feature, df=ElectionData, bins=100):
     df.hist(column=feature, bins=bins)
     plt.pyplot.show()
 
 
-def find_outliers(df):
+def find_outliers(df=ElectionData):
     ObjFeat = df.keys()[df.dtypes.map(lambda x: x == 'object')]
     for f in ObjFeat:
         df[f] = df[f].astype("str")
         df[f] = df[f].astype("category")
         df[f] = df[f].cat.rename_categories(range(df[f].nunique())).astype(int)
         df.loc[df[f].isnull(), f] = np.nan  # fix NaN conversion
-    X_train = df.drop('Vote', axis=1)
+    X_train = drop_label_column(df)
     clf = IsolationForest()
     clf.fit(X_train)
     y_pred_train = clf.predict(X_train)
@@ -103,9 +111,9 @@ def find_outliers(df):
     print(count)
 
 
-def feature_selection_RFE_test(df, RFE_test=True, nonlinear_test=True):
-    df_features = df.drop('Vote', axis=1)
-    df_label = df['Vote']
+def feature_selection_RFE_test(df=ElectionData, RFE_test=True, nonlinear_test=True):
+    df_features = drop_label_column(df)
+    df_label = df[label_name]
     features_names = list(df_features.columns)
 
     # Configurations:
@@ -167,7 +175,7 @@ def feature_selection_RFE_test(df, RFE_test=True, nonlinear_test=True):
     print('\nAll Tests Ended.')
 
 
-def clean_data(df, features_info_dict=None, negative_to_mean=True, labels_to_unique_ints=True, nominal_to_bool_split=True,
+def clean_data(df=ElectionData, features_info_dict=None, negative_to_mean=True, labels_to_unique_ints=True, nominal_to_bool_split=True,
                missing_values_fill=True, binary_to_nominal=True, normalization=True):
     ''' Main function to clean data '''
 
@@ -180,10 +188,10 @@ def clean_data(df, features_info_dict=None, negative_to_mean=True, labels_to_uni
 
     if labels_to_unique_ints:
         # Convert Vote (label) to unique numbers
-        df['Vote'] = df['Vote'].astype("str")
-        df['Vote'] = df['Vote'].astype("category")
-        df['Vote'] = df['Vote'].cat.rename_categories(range(df['Vote'].nunique())).astype(int)
-        df.loc[df['Vote'].isnull(), 'Vote'] = np.nan  # fix NaN conversion
+        df[label_name] = df[label_name].astype("str")
+        df[label_name] = df[label_name].astype("category")
+        df[label_name] = df[label_name].cat.rename_categories(range(df[label_name].nunique())).astype(int)
+        df.loc[df[label_name].isnull(), label_name] = np.nan  # fix NaN conversion
 
     if nominal_to_bool_split:
         # Nominal features splitting:
@@ -196,7 +204,7 @@ def clean_data(df, features_info_dict=None, negative_to_mean=True, labels_to_uni
 
     if missing_values_fill:
         #  Fill missing values by probability/mean:
-        df = fill_missing_values(df, features_info_dict)
+        df = fill_missing_values(features_info_dict=features_info_dict, df=df)
 
     if binary_to_nominal:
         # Binary nominal (yes/no etc') to numeric (0/1):
