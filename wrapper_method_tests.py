@@ -68,7 +68,7 @@ def feature_selection_rfe_test(df=df_train, RFE_test=True, nonlinear_test=True):
     print('\nAll Tests Ended.')
 
 
-def step_forward_selection_by_random_forest(features_to_select, df=df_train, to_print=True):
+def step_forward_selection_by_random_forest(features_to_select=27, df=df_train, to_print=True):
 
     if to_print:
         print('\nStarting step forward feature selection test using RandomForest classifier.')
@@ -77,7 +77,7 @@ def step_forward_selection_by_random_forest(features_to_select, df=df_train, to_
     df_label = get_label_column(df)
 
     feature_selector = SequentialFeatureSelector(RandomForestClassifier(n_jobs=-1, n_estimators=100),
-                                                 k_features=features_to_select, forward=True, verbose=2, cv=4)  # scoring='roc_auc'
+                                                 k_features=features_to_select, forward=True, verbose=2, cv=4)
     features = feature_selector.fit(df_features, df_label)
     filtered_features = df_features.columns[list(features.k_feature_idx_)]
 
