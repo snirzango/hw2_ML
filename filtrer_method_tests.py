@@ -1,6 +1,7 @@
 from utils import *
 from globals import *
 from sklearn.feature_selection import VarianceThreshold
+from scipy import stats
 
 
 def find_quasi_constant_features(df=df_train, variance_threshold=0.1, to_print=True):
@@ -48,22 +49,32 @@ def find_duplicated_features(df=df_train, to_print=True):
 
 def find_correlated_features(df=df_train, correlation_threshold=0.8, to_print=True):
     if to_print:
-        print('\nStarting correlated features test with threshold of {}.'.format(correlation_threshold))
+        print('\n', '~'*10)
+        print('Starting correlated features test with threshold of {}.\n'.format(correlation_threshold))
 
     df_features = drop_label_column(df)
     features_names = list(df_features.columns)
 
-    correlated_features = set()
+    correlated_features_info = []
     correlation_matrix = df_features.corr()
 
     for i in range(len(correlation_matrix.columns)):
         for j in range(i):
             if abs(correlation_matrix.iloc[i, j]) > correlation_threshold:
+                features_str = (features_names[i], features_names[j])
+                slope, intercept, correlation_coefficient, _, _ = stats.linregress(df[features_str[0]].values, df[features_str[1]].values)
+
+                info_dict = {'features': features_str, 'slope': slope, 'intercept': intercept, 'corr': correlation_coefficient}
+
+                correlated_features_info.append(info_dict)
+
                 if to_print:
-                    print('Correlation found between {} and {}.'.format(features_names[i], features_names[j]))
-                correlated_features.add(correlation_matrix.columns[i])
+                    print('*{}* IS CORRELATED WITH *{}*.'.format(features_str[0], features_str[1]))
+                    print('Slope: {}. Intercept: {}. Correlation Coefficient: {}.'.format(slope, intercept, correlation_coefficient))
+                    print('~'*5)
 
     if to_print:
-        print('\nFound {} correlated_features. The found features (to drop) are:\n{}\n'.format(len(correlated_features), correlated_features))
+        print('*DONE*')
+        print('~' * 10, '\n')
 
-    return correlated_features
+    return correlated_features_info
