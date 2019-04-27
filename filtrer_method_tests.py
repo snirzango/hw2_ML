@@ -3,7 +3,7 @@ from globals import *
 from sklearn.feature_selection import VarianceThreshold
 
 
-def find_quasi_constant_features(df=ElectionData, variance_threshold=0.1, to_print=True):
+def find_quasi_constant_features(df=df_train, variance_threshold=0.1, to_print=True):
     '''
         Find features that their values are 99% similar and therefore
         Are probably not relevant.
@@ -30,7 +30,7 @@ def find_quasi_constant_features(df=ElectionData, variance_threshold=0.1, to_pri
     return features_that_are_qconstant
 
 
-def find_duplicated_features(df=ElectionData, to_print=True):
+def find_duplicated_features(df=df_train, to_print=True):
     if to_print:
         print('\nStarting duplicated features test.')
 
@@ -46,7 +46,7 @@ def find_duplicated_features(df=ElectionData, to_print=True):
     return duplicated_features
 
 
-def find_correlated_features(df=ElectionData, correlation_threshold=0.8, to_print=True):
+def find_correlated_features(df=df_train, correlation_threshold=0.8, to_print=True):
     if to_print:
         print('\nStarting correlated features test with threshold of {}.'.format(correlation_threshold))
 
