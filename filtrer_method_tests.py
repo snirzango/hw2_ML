@@ -62,7 +62,13 @@ def find_correlated_features(df=df_train, correlation_threshold=0.8, to_print=Tr
         for j in range(i):
             if abs(correlation_matrix.iloc[i, j]) > correlation_threshold:
                 features_str = (features_names[i], features_names[j])
-                slope, intercept, correlation_coefficient, _, _ = stats.linregress(df[features_str[0]].values, df[features_str[1]].values)
+
+                # Preparing two numpy arrays with no nan values
+                features_np = (df[features_str[0]].values, df[features_str[1]].values)  # Features as numpy arrays
+                mask = ~np.isnan(features_np[0]) & ~np.isnan(features_np[1])
+                features_np = (features_np[0][mask], features_np[1][mask])  # Now containing no nan values
+
+                slope, intercept, correlation_coefficient, _, _ = stats.linregress(features_np[0], features_np[1])
 
                 info_dict = {'features': features_str, 'slope': slope, 'intercept': intercept, 'corr': correlation_coefficient}
 
@@ -72,7 +78,7 @@ def find_correlated_features(df=df_train, correlation_threshold=0.8, to_print=Tr
                     print('*{}* IS CORRELATED WITH *{}*.'.format(features_str[0], features_str[1]))
                     print('Slope: {}. Intercept: {}. Correlation Coefficient: {}.'.format(slope, intercept, correlation_coefficient))
                     print('~'*5)
-
+    
     if to_print:
         print('*DONE*')
         print('~' * 10, '\n')

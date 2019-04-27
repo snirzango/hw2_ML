@@ -13,9 +13,9 @@ df = df_train
 # Configs
 to_clean = True
 clean_args = {'df': df, 'features_info_dict': None, 'negative_to_mean': False, 'labels_to_unique_ints': False,
-              'nominal_to_bool_split': True, 'missing_values_fill': True, 'binary_to_nominal': True, 'normalization': False}
+              'nominal_to_bool_split': True, 'missing_values_fill': False, 'binary_to_numeric': True, 'normalization': False}
 
-to_print_corr_matrix = True  # Run this *WITHOUT* cleaning !!
+to_print_corr_matrix = True  # RUN WITHOUT CLEANING (except for making everything numeric)
 correlation_thresholds, print_info = [0.8, 0.95, 0.99], False
 
 to_test_accuracy = False

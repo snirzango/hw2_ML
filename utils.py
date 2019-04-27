@@ -106,7 +106,7 @@ def find_outliers(df=df_train):
 
 
 def clean_data(df=df_train, features_info_dict=None, negative_to_mean=True, labels_to_unique_ints=True, nominal_to_bool_split=True,
-               missing_values_fill=True, binary_to_nominal=True, normalization=True):
+               missing_values_fill=True, binary_to_numeric=True, normalization=True):
     ''' Main function to clean data '''
 
     # TODO: add "features to drop" section.
@@ -136,7 +136,7 @@ def clean_data(df=df_train, features_info_dict=None, negative_to_mean=True, labe
         #  Fill missing values by probability/mean:
         df = fill_missing_values(features_info_dict=features_info_dict, df=df)
 
-    if binary_to_nominal:
+    if binary_to_numeric:
         # Binary nominal (yes/no etc') to numeric (0/1):
         binary_features_and_values = {'Looking_at_poles_results': {'Yes': 0, 'No': 1},
                                       'Financial_agenda_matters': {'Yes': 0, 'No': 1},
