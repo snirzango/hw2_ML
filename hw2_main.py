@@ -28,6 +28,10 @@ feature_selection_method = wrapper_tests.step_forward_selection_by_random_forest
 
 if to_clean:
     df = clean_func()
+    utils.show_graph("Purples", df)
+    utils.show_graph("Turquoises", df)
+    utils.show_graph("Violets", df)
+    utils.show_graph("Browns", df)
 
 
 if to_print_corr_matrix:

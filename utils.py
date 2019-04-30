@@ -15,6 +15,8 @@ from sklearn.linear_model import LinearRegression, LassoCV
 from sklearn.feature_selection import RFE
 from sklearn.metrics import roc_auc_score
 
+from matplotlib import pyplot as plt
+
 
 def drop_label_column(df=df_train):
     return df.drop(label_name, axis=1)
@@ -197,3 +199,36 @@ def test_with_random_forest(df_to_train_on, df_to_test_on, labels_are_strings=Tr
     test_pred = random_forest.predict(df_test_features)
     print('Accuracy on test set: {}'.format(score_function(df_test_label, test_pred)))
 
+def show_graph(lable,examples_list):
+    examples_list = examples_list.values
+    examples_indexes = []
+    for example_index in range(examples_list.__len__()):
+        print(examples_list[example_index][24])
+        if str(examples_list[example_index][24]) == lable:
+            examples_indexes.append(example_index)
+
+    X = [examples_list[examples_indexes[i]] for i in range(examples_indexes.__len__())]
+    for i in range(examples_indexes.__len__()):
+        X[i] = np.delete(X[i], 24)
+    T2 = [X[i].__len__() for i in range(examples_indexes.__len__())]
+    T3 = [np.linspace(0, T2[i] - 1, T2[i]) for i in range(examples_indexes.__len__())]
+    # for i in range(len(X)):
+    #     plt.plot(T, X[i], label='rotem the qu')
+    #
+    # plt.xlabel("T")
+    # plt.ylabel("P")
+    # plt.title("Probability as a function of the temperature")
+    # plt.legend()
+    # plt.grid()
+    # plt.show()
+    # exit()
+    for i in range(len(X)):
+        plt.plot(T3[i], X[i])
+
+    plt.xlabel("manipulated features")
+    plt.ylabel("value")
+    plt.title("graph by " +lable)
+    plt.legend()
+    plt.grid()
+    plt.show()
+    exit()
