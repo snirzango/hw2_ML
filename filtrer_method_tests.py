@@ -64,7 +64,17 @@ def find_correlated_features(df=df_train, correlation_threshold=0.8, to_print=Tr
                 features_str = (features_names[i], features_names[j])
 
                 # Preparing two numpy arrays with no nan values
-                features_np = (df[features_str[0]].values, df[features_str[1]].values)  # Features as numpy arrays
+                features_np = (df_features[features_str[0]].values, df_features[features_str[1]].values)  # Features as numpy arrays
+
+                feature0_not_numeric, feature1_not_numeric = (features_np[0].dtype == np.object, features_np[1].dtype == np.object)
+                if feature0_not_numeric or feature1_not_numeric:
+                    print('\n', '*'*5)
+                    print("find_correlated_features: [WARNING]! Skipping the following features since one or more aren't numeric:")
+                    print('{} (not numeric? {}), {} (not numeric? {})'.format(features_str[0], feature0_not_numeric,
+                                                                              features_str[1], feature1_not_numeric))
+                    print('*' * 5, '\n')
+                    continue
+
                 mask = ~np.isnan(features_np[0]) & ~np.isnan(features_np[1])
                 features_np = (features_np[0][mask], features_np[1][mask])  # Now containing no nan values
 

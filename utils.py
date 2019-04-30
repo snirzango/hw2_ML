@@ -17,7 +17,6 @@ from sklearn.metrics import roc_auc_score
 
 from matplotlib import pyplot as plt
 
-
 def drop_label_column(df=df_train):
     return df.drop(label_name, axis=1)
 
@@ -57,8 +56,6 @@ def fill_missing_values_by_linear_connection(feature1, feature2, correlated_feat
     df = df.drop(columns=[feature_to_drop])
 
     return df
-
-
 
 
 def get_features_info_dict(df=df_train, eliminate_nd_elements=True):
@@ -164,10 +161,6 @@ def clean_data(df=df_train, features_info_dict=None, drop_features=True, negativ
     if features_info_dict is None:
         features_info_dict = get_features_info_dict(df)
 
-    if missing_values_fill:
-        #  Fill missing values by probability/mean:
-        df = fill_missing_values_by_feature_mean(features_info_dict=features_info_dict, df=df)
-
     if binary_to_numeric:
         # Binary nominal (yes/no etc') to numeric (0/1):
         binary_features_and_values = {'Looking_at_poles_results': {'Yes': 0, 'No': 1},
@@ -178,6 +171,17 @@ def clean_data(df=df_train, features_info_dict=None, drop_features=True, negativ
                                       'Age_group': {'Below_30': 0, '30-45': 1, '45_and_up': 2}}
         for feature, replacement_dict in binary_features_and_values.items():
             df[feature] = df[feature].map(replacement_dict)
+
+    if missing_values_fill:
+        #  Fill missing values by linear connection:
+        import filtrer_method_tests
+        correlated_features_info = filtrer_method_tests.find_correlated_features(df=df, to_print=False)
+        to_fill_by_linear_connection = []  # This is supposed to be a list of sets. in each set two columns with linear connection.
+        for correlated_features in to_fill_by_linear_connection:
+            fill_missing_values_by_linear_connection(correlated_features[0], correlated_features[1], correlated_features_info, features_info_dict, df)
+
+        #  Fill missing values by probability/mean:
+        df = fill_missing_values_by_feature_mean(features_info_dict=features_info_dict, df=df)
 
     if normalization:
         #  Normalization phase:
