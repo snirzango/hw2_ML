@@ -33,6 +33,9 @@ def fill_missing_values_by_feature_mean(features_info_dict, df=df_train):
 
 
 def fill_missing_values_by_linear_connection(feature1, feature2, correlated_features_info, features_info_dict, df=df_train):
+    if feature1 not in df.columns or feature2 not in df.columns:
+        return df
+
     feature1_nulls_count = df[feature1].isnull().sum()
     feature2_nulls_count = df[feature2].isnull().sum()
 
@@ -47,11 +50,12 @@ def fill_missing_values_by_linear_connection(feature1, feature2, correlated_feat
         elif dictionary['features'] == (feature_to_fill, feature_to_drop):
             slope, intercept = (dictionary['slope'] ** -1, dictionary['intercept']/dictionary['slope'])
 
-    df[feature_to_fill] = df[feature_to_fill].apply(
-        lambda row: (df[feature_to_drop] * slope) + intercept if np.isnan(row) and not np.isnan(df[feature_to_drop])
-        else choose_mean_value(features_info_dict, feature_to_drop) if np.isnan(row) and np.isnan(df[feature_to_drop])
-        else row
-    )
+    # df[feature_to_fill] = df[feature_to_fill].apply(
+    #     lambda row: (df[feature_to_drop] * slope) + intercept if np.isnan(row) and not np.isnan(df[feature_to_drop])
+    #     else choose_mean_value(features_info_dict, feature_to_drop) if np.isnan(row) and np.isnan(df[feature_to_drop])
+    #     else row
+    # )
+    df[feature_to_fill].fillna((df[feature_to_drop] * slope) + intercept)
 
     df = df.drop(columns=[feature_to_drop])
 
@@ -175,12 +179,22 @@ def clean_data(df=df_train, features_info_dict=None, drop_features=True, negativ
     if missing_values_fill:
         #  Fill missing values by linear connection:
         import filtrer_method_tests
-        correlated_features_info = filtrer_method_tests.find_correlated_features(df=df, to_print=False)
-        to_fill_by_linear_connection = []  # This is supposed to be a list of sets. in each set two columns with linear connection.
-        for correlated_features in to_fill_by_linear_connection:
-            fill_missing_values_by_linear_connection(correlated_features[0], correlated_features[1], correlated_features_info, features_info_dict, df)
 
-        #  Fill missing values by probability/mean:
+        MSE_threshold = 20
+
+        correlated_features_info = filtrer_method_tests.find_correlated_features(df=df, to_print=False)
+        to_fill_by_linear_connection = [dictionary['features'] for dictionary in correlated_features_info if dictionary['MSE'] <= MSE_threshold]
+
+        for correlated_features in to_fill_by_linear_connection:
+            df = fill_missing_values_by_linear_connection(correlated_features[0], correlated_features[1], correlated_features_info, features_info_dict, df)
+
+        # Drop features with correlation that is not linear (remained ones):
+        correlated_features_info = filtrer_method_tests.find_correlated_features(df=df, to_print=False)
+        remained_correlated_features = set([dictionary['features'][0] for dictionary in correlated_features_info])
+        df.drop(columns=remained_correlated_features)
+
+
+        # Fill missing values by probability/mean:
         df = fill_missing_values_by_feature_mean(features_info_dict=features_info_dict, df=df)
 
     if normalization:

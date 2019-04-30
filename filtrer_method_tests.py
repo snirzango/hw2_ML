@@ -81,12 +81,13 @@ def find_correlated_features(df=df_train, correlation_threshold=0.8, to_print=Tr
                 slope, intercept, correlation_coefficient, _, _ = stats.linregress(features_np[0], features_np[1])
 
                 MSE = mean_squared_error((features_np[0] * slope) + intercept, features_np[1])
+                MSE = MSE / np.amax(features_np[1])  # normalize by division by max element
 
                 info_dict = {'features': features_str, 'slope': slope, 'intercept': intercept, 'corr': correlation_coefficient, 'MSE': MSE}
 
                 correlated_features_info.append(info_dict)
 
-    correlated_features_info = sorted(correlated_features_info, key=lambda dictionary: dictionary['MSE'])
+    correlated_features_info = sorted(correlated_features_info, key=lambda elem: elem['MSE'])
 
     if to_print:
         print('Found features:')
