@@ -16,7 +16,7 @@ clean_args = {'df': df, 'features_info_dict': None, 'negative_to_mean': False, '
               'nominal_to_bool_split': True, 'missing_values_fill': False, 'binary_to_numeric': True, 'normalization': False}
 
 to_print_corr_matrix = True  # RUN WITHOUT CLEANING (except for making everything numeric)
-correlation_thresholds, print_info = [0.8, 0.95, 0.99], False
+correlation_thresholds, print_info = [0.99], False
 
 to_test_accuracy = False
 df_to_train, df_to_test, clean_accuracy_dfs = (df_train, df_validation, True)
@@ -24,15 +24,16 @@ df_to_train, df_to_test, clean_accuracy_dfs = (df_train, df_validation, True)
 to_test_feature_selection = False
 feature_selection_method = wrapper_tests.step_forward_selection_by_random_forest
 
+to_plot_two_features_together = True
+x_feature, y_feature = ('Avg_Satisfaction_with_previous_vote', 'Avg_environmental_importance')
+
+to_plot_feature_and_label = False
+label_to_plot = 'Purples'
+
 # --------------------- RUN -----------------------------
 
 if to_clean:
     df = clean_func()
-    utils.show_graph("Purples", df)
-    utils.show_graph("Turquoises", df)
-    utils.show_graph("Violets", df)
-    utils.show_graph("Browns", df)
-
 
 if to_print_corr_matrix:
     for threshold in correlation_thresholds:
@@ -51,3 +52,9 @@ if to_test_accuracy:
 if to_test_feature_selection:
     feature_selection_method(df=df)
 
+if to_plot_two_features_together:
+    df.plot(x=x_feature, y=y_feature)
+    utils.plt.show()
+
+if to_plot_feature_and_label:
+    utils.plot_label_and_examples(label_to_plot, df)

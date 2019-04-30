@@ -2,7 +2,7 @@ from utils import *
 from globals import *
 from sklearn.feature_selection import VarianceThreshold
 from scipy import stats
-
+from sklearn.metrics import mean_squared_error
 
 def find_quasi_constant_features(df=df_train, variance_threshold=0.1, to_print=True):
     '''
@@ -70,13 +70,15 @@ def find_correlated_features(df=df_train, correlation_threshold=0.8, to_print=Tr
 
                 slope, intercept, correlation_coefficient, _, _ = stats.linregress(features_np[0], features_np[1])
 
-                info_dict = {'features': features_str, 'slope': slope, 'intercept': intercept, 'corr': correlation_coefficient}
+                MSE = mean_squared_error((features_np[0] * slope) + intercept, features_np[1])
+
+                info_dict = {'features': features_str, 'slope': slope, 'intercept': intercept, 'corr': correlation_coefficient, 'MSE': MSE}
 
                 correlated_features_info.append(info_dict)
 
                 if to_print:
                     print('*{}* IS CORRELATED WITH *{}*.'.format(features_str[0], features_str[1]))
-                    print('Slope: {}. Intercept: {}. Correlation Coefficient: {}.'.format(slope, intercept, correlation_coefficient))
+                    print('Slope: {}. Intercept: {}. Correlation Coefficient: {}. MSE: {}.'.format(slope, intercept, correlation_coefficient, MSE))
                     print('~'*5)
     
     if to_print:
