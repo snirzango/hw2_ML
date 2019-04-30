@@ -86,13 +86,14 @@ def find_correlated_features(df=df_train, correlation_threshold=0.8, to_print=Tr
 
                 correlated_features_info.append(info_dict)
 
-                if to_print:
-                    print('*{}* IS CORRELATED WITH *{}*.'.format(features_str[0], features_str[1]))
-                    print('Slope: {}. Intercept: {}. Correlation Coefficient: {}. MSE: {}.'.format(slope, intercept, correlation_coefficient, MSE))
-                    print('~'*5)
-    
+    correlated_features_info = sorted(correlated_features_info, key=lambda dictionary: dictionary['MSE'])
+
     if to_print:
-        print('*DONE*')
+        print('Found features:')
+        for dictionary in correlated_features_info:
+            print(dictionary)
+
+        print('\n*DONE*')
         print('~' * 10, '\n')
 
     return correlated_features_info

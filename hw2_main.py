@@ -13,7 +13,7 @@ df = df_train
 # Configs
 to_clean = True
 clean_args = {'df': df, 'features_info_dict': None, 'drop_features': False, 'negative_to_mean': False, 'labels_to_unique_ints': False,
-              'nominal_to_bool_split': True, 'missing_values_fill': True, 'binary_to_numeric': True, 'normalization': False}
+              'nominal_to_bool_split': True, 'missing_values_fill': False, 'binary_to_numeric': True, 'normalization': False}
 
 to_print_corr_matrix = True  # RUN WITHOUT CLEANING (except for making everything numeric)
 correlation_thresholds, print_info = [0.9], False
@@ -24,8 +24,8 @@ df_to_train, df_to_test, clean_accuracy_dfs = (df_train, df_validation, True)
 to_test_feature_selection = False
 feature_selection_method = wrapper_tests.step_forward_selection_by_random_forest
 
-to_plot_two_features_together = False
-x_feature, y_feature = ('Avg_Satisfaction_with_previous_vote', 'Avg_environmental_importance')
+to_plot_two_features_together = True
+x_feature, y_feature = ('Yearly_ExpensesK', 'Avg_Residancy_Altitude')
 
 to_plot_feature_and_label = False
 label_to_plot = 'Purples'
