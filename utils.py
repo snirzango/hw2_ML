@@ -26,11 +26,39 @@ def get_label_column(df=df_train):
     return df[label_name]
 
 
-def fill_missing_values(features_info_dict, df=df_train):
+def fill_missing_values_by_feature_mean(features_info_dict, df=df_train):
     features = list(df.columns)
     for feature in features:
-        df[feature] = df[feature].apply(lambda v: choose_mean_value(features_info_dict, feature) if str(v) == 'nan' else v)
+        df[feature] = df[feature].apply(lambda row: choose_mean_value(features_info_dict, feature) if str(row) == 'nan' else row)
     return df
+
+
+def fill_missing_values_by_linear_connection(feature1, feature2, correlated_features_info, features_info_dict, df=df_train):
+    feature1_nulls_count = df[feature1].isnull().sum()
+    feature2_nulls_count = df[feature2].isnull().sum()
+
+    if feature1_nulls_count > feature2_nulls_count:
+        feature_to_drop, feature_to_fill = feature1, feature2
+    else:
+        feature_to_drop, feature_to_fill = feature2, feature1
+
+    for dictionary in correlated_features_info:
+        if dictionary['features'] == (feature_to_drop, feature_to_fill):
+            slope, intercept = (dictionary['slope'], dictionary['intercept'])
+        elif dictionary['features'] == (feature_to_fill, feature_to_drop):
+            slope, intercept = (dictionary['slope'] ** -1, dictionary['intercept']/dictionary['slope'])
+
+    df[feature_to_fill] = df[feature_to_fill].apply(
+        lambda row: (df[feature_to_drop] * slope) + intercept if np.isnan(row) and not np.isnan(df[feature_to_drop])
+        else choose_mean_value(features_info_dict, feature_to_drop) if np.isnan(row) and np.isnan(df[feature_to_drop])
+        else row
+    )
+
+    df = df.drop(columns=[feature_to_drop])
+
+    return df
+
+
 
 
 def get_features_info_dict(df=df_train, eliminate_nd_elements=True):
@@ -107,11 +135,13 @@ def find_outliers(df=df_train):
     print(count)
 
 
-def clean_data(df=df_train, features_info_dict=None, negative_to_mean=True, labels_to_unique_ints=True, nominal_to_bool_split=True,
-               missing_values_fill=True, binary_to_numeric=True, normalization=True):
+def clean_data(df=df_train, features_info_dict=None, drop_features=True, negative_to_mean=True, labels_to_unique_ints=True,
+               nominal_to_bool_split=True, missing_values_fill=True, binary_to_numeric=True, normalization=True):
     ''' Main function to clean data '''
 
-    # TODO: add "features to drop" section.
+    if drop_features:
+        features_to_drop = []
+        df = df.drop(columns=features_to_drop)
 
     if negative_to_mean:
         # Replacing negative numbers with mean for appropriate columns:
@@ -136,7 +166,7 @@ def clean_data(df=df_train, features_info_dict=None, negative_to_mean=True, labe
 
     if missing_values_fill:
         #  Fill missing values by probability/mean:
-        df = fill_missing_values(features_info_dict=features_info_dict, df=df)
+        df = fill_missing_values_by_feature_mean(features_info_dict=features_info_dict, df=df)
 
     if binary_to_numeric:
         # Binary nominal (yes/no etc') to numeric (0/1):
