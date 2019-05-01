@@ -1,8 +1,8 @@
 from utils import *
 from globals import *
-from sklearn.feature_selection import VarianceThreshold
+from sklearn.feature_selection import VarianceThreshold, SelectKBest
 from scipy import stats
-from sklearn.metrics import mean_squared_error
+from sklearn.metrics import mean_squared_error, zero_one_loss
 
 def find_quasi_constant_features(df=df_train, variance_threshold=0.1, to_print=True):
     '''
@@ -20,7 +20,7 @@ def find_quasi_constant_features(df=df_train, variance_threshold=0.1, to_print=T
     qconstant_filter.fit(df_features)
 
     # Results:
-    features_not_qconstants = list(df_features.columns[qconstant_filter.get_support()])
+    features_not_qconstants = list(df_features.columns[qconstant_filter.get_support(indices=True)])
     features_that_are_qconstant = [feature for feature in df_features.columns
                                    if feature not in features_not_qconstants]
 
@@ -58,6 +58,8 @@ def find_correlated_features(df=df_train, correlation_threshold=0.8, to_print=Tr
     correlated_features_info = []
     correlation_matrix = df_features.corr()
 
+    found_features_count = 0
+
     for i in range(len(correlation_matrix.columns)):
         for j in range(i):
             if abs(correlation_matrix.iloc[i, j]) > correlation_threshold:
@@ -68,11 +70,11 @@ def find_correlated_features(df=df_train, correlation_threshold=0.8, to_print=Tr
 
                 feature0_not_numeric, feature1_not_numeric = (features_np[0].dtype == np.object, features_np[1].dtype == np.object)
                 if feature0_not_numeric or feature1_not_numeric:
-                    print('\n', '*'*5)
-                    print("find_correlated_features: [WARNING]! Skipping the following features since one or more aren't numeric:")
-                    print('{} (not numeric? {}), {} (not numeric? {})'.format(features_str[0], feature0_not_numeric,
-                                                                              features_str[1], feature1_not_numeric))
-                    print('*' * 5, '\n')
+                    # print('\n', '*'*5)
+                    # print("find_correlated_features: [WARNING]! Skipping the following features since one or more aren't numeric:")
+                    # print('{} (not numeric? {}), {} (not numeric? {})'.format(features_str[0], feature0_not_numeric,
+                    #                                                           features_str[1], feature1_not_numeric))
+                    # print('*' * 5, '\n')
                     continue
 
                 mask = ~np.isnan(features_np[0]) & ~np.isnan(features_np[1])
@@ -81,16 +83,17 @@ def find_correlated_features(df=df_train, correlation_threshold=0.8, to_print=Tr
                 slope, intercept, correlation_coefficient, _, _ = stats.linregress(features_np[0], features_np[1])
 
                 MSE = mean_squared_error((features_np[0] * slope) + intercept, features_np[1])
-                MSE = MSE / np.amax(features_np[1])  # normalize by division by max element
+                MSE = MSE / np.mean(features_np[1])  # normalize by division by max element
 
                 info_dict = {'features': features_str, 'slope': slope, 'intercept': intercept, 'corr': correlation_coefficient, 'MSE': MSE}
 
+                found_features_count += 1
                 correlated_features_info.append(info_dict)
 
     correlated_features_info = sorted(correlated_features_info, key=lambda elem: elem['MSE'])
 
     if to_print:
-        print('Found features:')
+        print('Found {} features:'.format(found_features_count))
         for dictionary in correlated_features_info:
             print(dictionary)
 
@@ -98,3 +101,24 @@ def find_correlated_features(df=df_train, correlation_threshold=0.8, to_print=Tr
         print('~' * 10, '\n')
 
     return correlated_features_info
+
+
+def select_k_best_features(df=df_train, k=30):
+    df_features, df_label = (drop_label_column(df), get_label_column(df))
+    k_best_clf = SelectKBest(k=20).fit(df_features, df_label)
+
+    all_of_features = list(df.columns)
+
+    features_score = k_best_clf.scores_
+    features_mask = k_best_clf.get_support()
+    dropped_features = []
+    kept_features = []
+
+    for feature, is_dropped, score in zip(all_of_features, features_mask, features_score):
+        if is_dropped:
+            dropped_features.append((feature, score))
+        else:
+            kept_features.append((feature, score))
+
+    return sorted(kept_features, key=lambda tup: tup[1]), sorted(dropped_features, key=lambda tup: tup[1])
+

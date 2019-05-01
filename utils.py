@@ -141,7 +141,7 @@ def clean_data(df=df_train, features_info_dict=None, drop_features=True, negativ
     ''' Main function to clean data '''
 
     if drop_features:
-        features_to_drop = []
+        features_to_drop = ['%Of_Household_Income']
         df = df.drop(columns=features_to_drop)
 
     if negative_to_mean:
@@ -158,29 +158,16 @@ def clean_data(df=df_train, features_info_dict=None, drop_features=True, negativ
 
     if nominal_to_bool_split:
         # Nominal features splitting:
-        nominal_features_to_split = ['Most_Important_Issue', 'Will_vote_only_large_party', 'Main_transportation',
-                                     'Occupation']
-        df = ce.OneHotEncoder(handle_unknown='ignore', use_cat_names=True, cols=nominal_features_to_split).fit_transform(df)
+        df = pn.get_dummies(df, columns=nominal_features_to_split)
 
     if features_info_dict is None:
         features_info_dict = get_features_info_dict(df)
-
-    if binary_to_numeric:
-        # Binary nominal (yes/no etc') to numeric (0/1):
-        binary_features_and_values = {'Looking_at_poles_results': {'Yes': 0, 'No': 1},
-                                      'Financial_agenda_matters': {'Yes': 0, 'No': 1},
-                                      'Married': {'Yes': 0, 'No': 1},
-                                      'Gender': {'Female': 0, 'Male': 1},
-                                      'Voting_Time': {'By_16:00': 0, 'After_16:00': 1},
-                                      'Age_group': {'Below_30': 0, '30-45': 1, '45_and_up': 2}}
-        for feature, replacement_dict in binary_features_and_values.items():
-            df[feature] = df[feature].map(replacement_dict)
 
     if missing_values_fill:
         #  Fill missing values by linear connection:
         import filtrer_method_tests
 
-        MSE_threshold = 20
+        MSE_threshold = 53
 
         correlated_features_info = filtrer_method_tests.find_correlated_features(df=df, to_print=False)
         to_fill_by_linear_connection = [dictionary['features'] for dictionary in correlated_features_info if dictionary['MSE'] <= MSE_threshold]
@@ -193,9 +180,13 @@ def clean_data(df=df_train, features_info_dict=None, drop_features=True, negativ
         remained_correlated_features = set([dictionary['features'][0] for dictionary in correlated_features_info])
         df.drop(columns=remained_correlated_features)
 
-
         # Fill missing values by probability/mean:
         df = fill_missing_values_by_feature_mean(features_info_dict=features_info_dict, df=df)
+
+    if binary_to_numeric:
+        # Binary nominal (yes/no etc') to numeric (0/1):
+        for feature, replacement_dict in binary_features_and_values.items():
+            df[feature] = df[feature].map(replacement_dict)
 
     if normalization:
         #  Normalization phase:
