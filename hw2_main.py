@@ -22,7 +22,7 @@ to_test_accuracy = False
 df_to_train, df_to_test, clean_accuracy_dfs = (df_train, df_validation, True)
 
 to_test_feature_selection = True
-feature_selection_method = filter_tests.select_k_best_features
+feature_selection_method = filter_tests.relief
 
 to_plot_two_features_together = False
 x_feature, y_feature = ('Yearly_ExpensesK', 'Avg_Residancy_Altitude')

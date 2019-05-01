@@ -122,3 +122,30 @@ def select_k_best_features(df=df_train, k=30):
 
     return sorted(kept_features, key=lambda tup: tup[1]), sorted(dropped_features, key=lambda tup: tup[1])
 
+
+def relief(df=df_train, iterations=5, threshold=12345):
+
+    w_vector = {feature: 0 for feature in [elem for elem in list(df.columns) if elem not in [label_name]]}
+
+    for feature in w_vector.keys():
+
+        for _ in range(iterations):
+
+            df_feature_and_label = df.drop(columns=[elem for elem in w_vector.keys() if elem not in [label_name, feature]])
+
+            random_row = df_feature_and_label.sample()
+            label, value = random_row[label_name].values[0], random_row[feature].values[0]
+
+            values_of_same_vote = df_feature_and_label[df_feature_and_label[label_name] == label][feature].values
+            values_of_other_vote = df_feature_and_label[df_feature_and_label[label_name] != label][feature].values
+
+            idx_of_nearest_hit = (np.abs(values_of_same_vote - value)).argmin()
+            idx_of_nearest_miss = (np.abs(values_of_other_vote - value)).argmin()
+
+            nearest_hit = values_of_same_vote[idx_of_nearest_hit]
+            nearest_miss = values_of_other_vote[idx_of_nearest_miss]
+
+            w_vector[feature] += float(((value - nearest_miss) ** 2) - ((value - nearest_hit) ** 2))
+
+    sorted_w_vector = [(k, w_vector[k]) for k in sorted(w_vector, key=w_vector.get, reverse=True)]
+    return sorted_w_vector
