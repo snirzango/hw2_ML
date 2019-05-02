@@ -1,8 +1,10 @@
 from utils import *
 from globals import *
 from sklearn.feature_selection import VarianceThreshold, SelectKBest
+from sklearn.model_selection import cross_val_score
 from scipy import stats
 from sklearn.metrics import mean_squared_error, zero_one_loss
+
 
 def find_quasi_constant_features(df=df_train, variance_threshold=0.1, to_print=True):
     '''
@@ -123,7 +125,7 @@ def select_k_best_features(df=df_train, k=30):
     return sorted(kept_features, key=lambda tup: tup[1]), sorted(dropped_features, key=lambda tup: tup[1])
 
 
-def relief(df=df_train, iterations=5, threshold=12345):
+def relief(df=df_train, iterations=500, threshold=12345):
 
     w_vector = {feature: 0 for feature in [elem for elem in list(df.columns) if elem not in [label_name]]}
 
@@ -149,3 +151,45 @@ def relief(df=df_train, iterations=5, threshold=12345):
 
     sorted_w_vector = [(k, w_vector[k]) for k in sorted(w_vector, key=w_vector.get, reverse=True)]
     return sorted_w_vector
+
+
+def sfs(df=df_train, clf=RandomForestClassifier(n_estimators=100), epsilon=1e-8):
+    df_label = get_label_column(df)
+
+    remaining_features_to_test = list(drop_label_column(df).columns)
+    latest_score_difference = 1
+    latest_score = 0
+
+    epoch = 1
+
+    selected_features = []
+    selected_features_scores = []
+
+    while latest_score_difference > epsilon:
+        best_score, best_feature = 0, ''
+
+        print('Starting epoch number {}. gap={}, epsilon={}.'.format(epoch, latest_score_difference, epsilon))
+        epoch += 1
+
+        for feature in remaining_features_to_test:
+            selected_features.append(feature)  # this is temporary
+            df_to_estimate_on = df[selected_features]
+
+            score = cross_val_score(estimator=clf, X=df_to_estimate_on, y=df_label, cv=5).mean()
+
+            if score > best_score:
+                best_score = score
+                best_feature = feature
+
+            selected_features.remove(feature)
+
+        latest_score_difference = best_score - latest_score
+        latest_score = best_score
+        selected_features.append(best_feature)
+        selected_features_scores.append(best_score)
+        remaining_features_to_test.remove(best_feature)
+
+    sorted_selected_features = sorted([(feature, score) for feature, score in zip(selected_features, selected_features_scores)],
+                                      key=lambda tup: tup[1])
+    return sorted_selected_features
+

@@ -2,7 +2,6 @@ from globals import *
 
 import numpy as np
 import pandas as pn
-import category_encoders as ce
 import matplotlib as plt
 
 import warnings
