@@ -203,6 +203,9 @@ def clean_data(df=df_train, features_info_dict=None, drop_features=True, negativ
         scalar_0_to_1 = preprocessing.MinMaxScaler(feature_range=(0, 1))
         scalar_minus1_to_1 = preprocessing.MinMaxScaler(feature_range=(-1, 1))
 
+        features_to_normalize_0_to_1 = [elem for elem in features_to_normalize_0_to_1 if elem in list(df.columns)]
+        features_to_normalize_minus1_to_1 = [elem for elem in features_to_normalize_minus1_to_1 if elem in list(df.columns)]
+
         for feature in features_to_normalize_0_to_1:
             df[feature] = scalar_0_to_1.fit_transform(df[feature].values.reshape(-1, 1))
 

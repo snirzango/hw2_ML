@@ -103,3 +103,43 @@ def step_forward_selection_by_random_forest(features_to_select=27, df=df_train, 
     #        'Avg_education_importance', 'Financial_agenda_matters'],
     #         dtype='object')
 
+
+def sfs(df=df_train, clf=RandomForestClassifier(n_estimators=100), epsilon=1e-8):
+    df_label = get_label_column(df)
+
+    remaining_features_to_test = list(drop_label_column(df).columns)
+    latest_score_difference = 1
+    latest_score = 0
+
+    epoch = 1
+
+    selected_features = []
+    selected_features_scores = []
+
+    while latest_score_difference > epsilon:
+        best_score, best_feature = 0, ''
+
+        print('Starting epoch number {}. gap={}, epsilon={}.'.format(epoch, latest_score_difference, epsilon))
+        epoch += 1
+
+        for feature in remaining_features_to_test:
+            selected_features.append(feature)  # this is temporary
+            df_to_estimate_on = df[selected_features]
+
+            score = cross_val_score(estimator=clf, X=df_to_estimate_on, y=df_label, cv=5).mean()
+
+            if score > best_score:
+                best_score = score
+                best_feature = feature
+
+            selected_features.remove(feature)
+
+        latest_score_difference = best_score - latest_score
+        latest_score = best_score
+        selected_features.append(best_feature)
+        selected_features_scores.append(best_score)
+        remaining_features_to_test.remove(best_feature)
+
+    sorted_selected_features = sorted([(feature, score) for feature, score in zip(selected_features, selected_features_scores)],
+                                      key=lambda tup: tup[1])
+    return sorted_selected_features

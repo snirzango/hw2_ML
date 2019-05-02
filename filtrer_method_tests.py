@@ -125,71 +125,69 @@ def select_k_best_features(df=df_train, k=30):
     return sorted(kept_features, key=lambda tup: tup[1], reverse=True), sorted(dropped_features, key=lambda tup: tup[1], reverse=True)
 
 
-def relief(df=df_train, iterations=500, threshold=12345):
+def relief(df=df_train, iterations=3000, threshold=12345):
 
     w_vector = {feature: 0 for feature in [elem for elem in list(df.columns) if elem not in [label_name]]}
 
     for feature in w_vector.keys():
+        print(feature)
 
-        for _ in range(iterations):
+        df_feature_and_label = df.drop(columns=[elem for elem in w_vector.keys() if elem not in [label_name, feature]])
 
-            df_feature_and_label = df.drop(columns=[elem for elem in w_vector.keys() if elem not in [label_name, feature]])
+        is_binary_feature = len(list(set(df[feature]))) == 2
 
-            random_row = df_feature_and_label.sample()
-            label, value = random_row[label_name].values[0], random_row[feature].values[0]
+        if is_binary_feature:
+            number_of_samples = 70
+            number_of_neighbours = 200
 
-            values_of_same_vote = df_feature_and_label[df_feature_and_label[label_name] == label][feature].values
-            values_of_other_vote = df_feature_and_label[df_feature_and_label[label_name] != label][feature].values
+            miss, match = (0, 0)
+            c = 0
+            for _ in range(number_of_samples):
 
-            idx_of_nearest_hit = (np.abs(values_of_same_vote - value)).argmin()
-            idx_of_nearest_miss = (np.abs(values_of_other_vote - value)).argmin()
+                if c in [20, 45, 60]:
+                    print(c)
+                c += 1
 
-            nearest_hit = values_of_same_vote[idx_of_nearest_hit]
-            nearest_miss = values_of_other_vote[idx_of_nearest_miss]
+                sample = df_feature_and_label.sample()
+                sample_label, sample_feature_value = sample[label_name], float(sample[feature])
 
-            w_vector[feature] += float(((value - nearest_miss) ** 2) - ((value - nearest_hit) ** 2))
+                counter = 0
+
+                while counter < number_of_neighbours:
+                    neighbour = df_feature_and_label.sample()
+                    neighbour_label, neighbour_feature_value = neighbour[label_name], float(neighbour[feature])
+
+                    if neighbour_label.values[0] != sample_label.values[0]:
+                        continue
+
+                    counter += 1
+
+                    if sample_feature_value == neighbour_feature_value:
+                        match += 1
+                    else:
+                        miss += 1
+
+            w_vector[feature] = match / (miss + match)
+
+        else:
+
+            for _ in range(iterations):
+
+                random_row = df_feature_and_label.sample()
+                sample_label, value = random_row[label_name].values[0], random_row[feature].values[0]
+
+                values_of_same_vote = df_feature_and_label[df_feature_and_label[label_name] == sample_label][feature].values
+                values_of_other_vote = df_feature_and_label[df_feature_and_label[label_name] != sample_label][feature].values
+
+                idx_of_nearest_hit = (np.abs(values_of_same_vote - value)).argmin()
+                idx_of_nearest_miss = (np.abs(values_of_other_vote - value)).argmin()
+
+                nearest_hit = values_of_same_vote[idx_of_nearest_hit]
+                nearest_miss = values_of_other_vote[idx_of_nearest_miss]
+
+                w_vector[feature] += float(((value - nearest_miss) ** 2) - ((value - nearest_hit) ** 2))
 
     sorted_w_vector = [(k, w_vector[k]) for k in sorted(w_vector, key=w_vector.get, reverse=True)]
     return sorted_w_vector
 
-
-def sfs(df=df_train, clf=RandomForestClassifier(n_estimators=100), epsilon=1e-8):
-    df_label = get_label_column(df)
-
-    remaining_features_to_test = list(drop_label_column(df).columns)
-    latest_score_difference = 1
-    latest_score = 0
-
-    epoch = 1
-
-    selected_features = []
-    selected_features_scores = []
-
-    while latest_score_difference > epsilon:
-        best_score, best_feature = 0, ''
-
-        print('Starting epoch number {}. gap={}, epsilon={}.'.format(epoch, latest_score_difference, epsilon))
-        epoch += 1
-
-        for feature in remaining_features_to_test:
-            selected_features.append(feature)  # this is temporary
-            df_to_estimate_on = df[selected_features]
-
-            score = cross_val_score(estimator=clf, X=df_to_estimate_on, y=df_label, cv=5).mean()
-
-            if score > best_score:
-                best_score = score
-                best_feature = feature
-
-            selected_features.remove(feature)
-
-        latest_score_difference = best_score - latest_score
-        latest_score = best_score
-        selected_features.append(best_feature)
-        selected_features_scores.append(best_score)
-        remaining_features_to_test.remove(best_feature)
-
-    sorted_selected_features = sorted([(feature, score) for feature, score in zip(selected_features, selected_features_scores)],
-                                      key=lambda tup: tup[1])
-    return sorted_selected_features
 
