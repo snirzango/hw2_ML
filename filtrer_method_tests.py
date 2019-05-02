@@ -107,9 +107,9 @@ def find_correlated_features(df=df_train, correlation_threshold=0.8, to_print=Tr
 
 def select_k_best_features(df=df_train, k=30):
     df_features, df_label = (drop_label_column(df), get_label_column(df))
-    k_best_clf = SelectKBest(k=20).fit(df_features, df_label)
+    k_best_clf = SelectKBest(k=k).fit(df_features, df_label)
 
-    all_of_features = list(df.columns)
+    all_of_features = list(df_features.columns)
 
     features_score = k_best_clf.scores_
     features_mask = k_best_clf.get_support()
@@ -122,7 +122,7 @@ def select_k_best_features(df=df_train, k=30):
         else:
             kept_features.append((feature, score))
 
-    return sorted(kept_features, key=lambda tup: tup[1]), sorted(dropped_features, key=lambda tup: tup[1])
+    return sorted(kept_features, key=lambda tup: tup[1], reverse=True), sorted(dropped_features, key=lambda tup: tup[1], reverse=True)
 
 
 def relief(df=df_train, iterations=500, threshold=12345):
